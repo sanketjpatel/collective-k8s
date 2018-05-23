@@ -1,6 +1,6 @@
 # Collective Talk - Introduction to Kubernetes
 
-This repository contains various commands, manifests, and docs for the Collective talk on 05/24/2018.
+This repository contains various commands, manifests, and docs for the Collective talk on 05/24/2018. A lot of the following material is inspired and borrowed from the Kubernetes: Up and Running(http://shop.oreilly.com/product/0636920043874.do) book.
 
 ## Setup
 
