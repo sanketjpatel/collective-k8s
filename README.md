@@ -503,7 +503,39 @@ Events:
   ...
 ```
 
-With the fluentd DaemonSet in place, adding a new node to the cluster will result in a fluentd Pod being deployed to that node automatically
+With the fluentd DaemonSet in place, adding a new node to the cluster will result in a fluentd Pod being deployed to that node automatically.
+
+You can also restrict the nodes on which the DaemonSet can run. To be able to do that, you need to add labels to the nodes and use a `nodeSelector` field in the DaemonSet spec.
+
+### Using NodeSelector
+
+Add a label to a node
+
+```bash
+$ kubectl label nodes ip-172-20-104-191.ec2.internal ssd=true
+```
+
+Run nginx-fast-storage DaemonSet
+
+```bash
+$ kubectl apply -f 08-nginx-fast-storage.yaml
+```
+
+Verify that the pods run only on the nodes that match the selector
+
+### Rolling Update of a DaemonSet
+
+Usually updating a DaemonSet is achieved by deleting all the pods and changing the container image before running it again. This can result in downtime. To avoid this, update the `spec.updateStrategy.type` field to `RollingUpdate`. Any change to `spec.template` will trigger a rolling update now.
+
+## Deployments
+
+## Stateful Sets
+
+## Persistent Volumes
+
+## ConfigMaps
+
+## Secrets
 
 ## Community
 
