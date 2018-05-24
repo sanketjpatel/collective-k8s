@@ -1,6 +1,6 @@
 # Collective Talk - Introduction to Kubernetes
 
-This repository contains various commands, manifests, and docs for the Collective talk on 05/24/2018. A lot of the following material is inspired and borrowed from the [Kubernetes: Up and Running](http://shop.oreilly.com/product/0636920043874.do) book.
+This repository contains various commands, manifests, and docs for the Collective talk on 05/24/2018. A lot of the following material is inspired and borrowed from the [Kubernetes: Up and Running](http://shop.oreilly.com/product/0636920043874.do) book. Refer to this awesome [Medium article](https://medium.com/containermind/a-beginners-guide-to-kubernetes-7e8ca56420b6) for diagrams and visualizing how the components interact with each other.
 
 ## Setup
 
@@ -372,3 +372,44 @@ $ LB_ING=$(kubectl get service alpaca-prod -o jsonpath='{.status.loadBalancer.in
 
 $ curl http://$LB_ING:8080
 ```
+
+### Advanced Details
+
+It is possible to achieve manual service discovery by using the `Endpoints` object and label selectors. Cluster IPs are stable virtual IPs that load-balance traffic across all of the endpoints in a service.. Every node on the cluster runs a component called `kube-proxy`. The `kube-proxy` watches for new services/endpoints in the cluster via the API server, and then programs a set of `iptables` rules in the kernel of that host to rewrite the destination of packets, so they are directed at one of the endpoints for the service. If the set of endpoints changes, the set of `iptables` rules is rewritten.
+
+Cleanup the services and deployments
+
+```bash
+$ kubectl delete svc,deploy -l app
+```
+
+Services offer a great way to dynamically find and react to the placement of where your workloads are running. Once your application can find a service, you are free to stop worrying about where things are running and when they move. Kubernetes will take care of the details of container placement.
+
+## ReplicaSets
+
+Previously we covered how to run individual containers as pods. But pods are essentially one-off singletons. More often than not, you want multiple replicas running at a particular time for the following reasons:
+
+* Redundancy - Failure can be tolerated
+* Scale - More requests can be handled
+* Sharding - Different parts of a computation can be handled in parallel
+
+A ReplicaSet acts as a cluster-wide Pod manager, ensuring that the right types and number of Pods are running at all times.
+
+They are the building blocks used to describe common application deployment patterns and provide the underpinnings of self-healing for our applications at the infrastructure level. The act of managing the replicated Pods is an example of a _reconciliation_ loop.
+
+The reconciliation loop is constantly running, observing the current state of the world and taking action to try to make the observed state match the desired state. This approach is inherently goal-driven, self-healing, and it can often be easily expressed in a few lines of code.
+
+One of the key themes that runs through Kubernetes is decoupling. In particular, all of the core concepts are modular with respect to each other and they are swappable with other components. In this spirit, the relationship between ReplicaSets and Pods is loosely coupled. ReplicaSets use label queries to identify the set of Pods they should be managing.
+
+* You can create a ReplicaSet that will _adopt_ an existing pod, seamlessly moving from a single imperative Pod to a replicated set of Pods managed by a ReplicaSet
+* You can quarantine pods/containers that are misbehaving due to failing health checks. Update the set of labels on the sick Pod, disassociating it from the ReplicaSet (and service), so you can debug the Pod. The Pod is still running, available for the developers for interactive debugging, instead of resigning to debugging from logs.
+
+### ReplicaSet Spec
+
+Create a ReplicaSet using
+
+```bash
+$ kubectl apply 05-kuard-rs.yaml
+```
+
+Since the number of Pods in the current state is less than the desired state, the ReplicaSet controller will create new Pods, using a Pod template that is contained in the ReplicaSet specification. The labels used for filtering the Pods are defined in the ReplicaSet spec are key to understanding how ReplicaSets work.
