@@ -44,7 +44,7 @@ $ kubectl apply -f 02-kuard-pod-health.yaml
 Add resource requests and limits
 
 ```bash
-$ kubectl apply -f 03-kuard-pod-resreq.yaml
+$ kubectl apply -f 03-kuard-pod-resources.yaml
 ```
 
 Add a volume to the pod
@@ -413,3 +413,107 @@ $ kubectl apply 05-kuard-rs.yaml
 ```
 
 Since the number of Pods in the current state is less than the desired state, the ReplicaSet controller will create new Pods, using a Pod template that is contained in the ReplicaSet specification. The labels used for filtering the Pods are defined in the ReplicaSet spec are key to understanding how ReplicaSets work.
+
+```bash
+$ kubectl describe rs kuard
+```
+
+You can see if a Pod is being managed by a ReplicaSet by checking the `kubernetes.io/created-by` annotation. However, such annotations are created on a best-effort basis.
+
+### Scaling ReplicaSets
+
+#### Imperative
+
+You can imperatively scale the ReplicaSet using
+
+```bash
+$ kubectl scale kuard --replicas=4
+```
+
+#### Declarative
+
+Declaratively, you can scale by updating the ReplicaSet spec in the `yaml` and using the `apply` command
+
+```yaml
+...
+spec:
+  replicas: 3
+...
+```
+
+```bash
+$ kubectl apply -f 05-kuard-rs.yaml
+```
+
+#### Autoscaling
+
+Kubernetes supports _Horizontal Pod Autoscaling_. HPA requires the presence of the [`heapster`](https://github.com/kubernetes/heapster) Pod in the `kube-system` namespace. Follow the [installation steps](https://github.com/kubernetes/heapster/blob/master/docs/influxdb.md) if you don't have heapster installed.
+
+```bash
+$ kubectl autoscale rs kuard --min=2 --max=5 --cpu-percent=80
+```
+
+### Deleting ReplicaSets
+
+```bash
+$ kubectl delete rs kuard
+```
+
+If you don't want to delete the pods that are being managed by the ReplicaSet, you can set the `--cascade` flag to `false`, to ensure only the ReplicaSet object gets deleted and not the Pods
+
+```bash
+$ kubectl delete rs kuard --cascade=false
+```
+
+## DaemonSets
+
+A DaemonSet ensures that a copy of a Pod is running across a set of nodes in a Kubernetes cluster. They are typically used to deploy system daemons such as log collectors and monitoring agents.
+
+### Creating a DaemonSet
+
+Run a `fluentd` logging agent on every node
+
+```bash
+$ kubect apply -f 07-fluentd.yaml
+```
+
+See the description
+
+```bash
+$ kubectl describe daemonset fluentd --namespace kube-system
+
+Name:           fluentd
+Selector:       app=fluentd
+Node-Selector:  <none>
+Labels:         app=fluentd
+Annotations:    kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"extensions/v1beta1","kind":"DaemonSet","metadata":{"annotations":{},"labels":{"app":"fluentd"},"name":"fluentd","namespace":"kube-system...
+Desired Number of Nodes Scheduled: 6
+Current Number of Nodes Scheduled: 6
+Number of Nodes Scheduled with Up-to-date Pods: 6
+Number of Nodes Scheduled with Available Pods: 6
+Number of Nodes Misscheduled: 0
+Pods Status:  6 Running / 0 Waiting / 0 Succeeded / 0 Failed
+Pod Template:
+...
+Events:
+  Type    Reason            Age   From                  Message
+  ----    ------            ----  ----                  -------
+  Normal  SuccessfulCreate  1m    daemonset-controller  Created pod: fluentd-9xlg8
+  Normal  SuccessfulCreate  1m    daemonset-controller  Created pod: fluentd-2z4gw
+  ...
+```
+
+With the fluentd DaemonSet in place, adding a new node to the cluster will result in a fluentd Pod being deployed to that node automatically
+
+## Community
+
+The biggest thing I love about Kubernetes and its ecosystem is the community and culture. There is collaboration unlike anything I have seen before. I encourage you to participate in meetups/webinars, engage with the people involved, and there's a ton to learn here.
+
+My favorites:
+
+* [TGIK](https://github.com/heptio/tgik)
+* [Kubernetes Slack](http://slack.k8s.io/)
+
+[The best advice we give programmers is to leave things better than how they started. We do it with code, why don’t we do it with communities? Why don’t we do it with people, colleagues, friends? - Aurynn Shaw](https://blog.aurynn.com/2015/12/16-contempt-culture)
+
+[Don't let your personal history be like a monolithic legacy application. Break everything down one piece at a time into manageable components, iterate, and don't be afraid to make mistakes. Let kindness be your orchestrater, and curiosity be your operating system. - Jaice Singer DuMars](https://twitter.com/jaydumars/status/981876817693937665)
